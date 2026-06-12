@@ -745,7 +745,7 @@ with tab1:
 with tab2:
     if selected_name == "— Seleccioná un activo —":
         st.info("👈 Seleccioná un activo desde el panel lateral para ver su análisis.")
-    else:
+    elif selected_name in sector_tickers:
         selected_ticker = sector_tickers[selected_name]
         st.markdown(f'<div class="section-title">{selected_ticker} — {selected_name} · Análisis Técnico</div>',
                     unsafe_allow_html=True)
@@ -928,7 +928,7 @@ with tab4:
 
     if selected_name == "— Seleccioná un activo —":
         st.info("👈 Seleccioná un activo desde el panel lateral para ver su señal.")
-    else:
+    elif selected_name in sector_tickers:
         selected_ticker_q = sector_tickers[selected_name]
         st.caption(f"Analizando: **{selected_ticker_q}** — {selected_name}")
 
