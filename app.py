@@ -730,9 +730,10 @@ with tab1:
                 texttemplate="<b>%{label}</b><br>%{customdata[1]:+.1f}%",
             ))
             fig_heat.update_layout(
-                **{k: v for k, v in CHART_THEME.items() if k != "hovermode"},
+                paper_bgcolor="#06090f",
+                plot_bgcolor="#06090f",
+                font=dict(color="#8fadc8", family="Inter, sans-serif", size=11),
                 height=320,
-                title=dict(text="", font=dict(color="#e8f0fe")),
                 margin=dict(l=0, r=0, t=0, b=0),
             )
             st.plotly_chart(fig_heat, use_container_width=True)
