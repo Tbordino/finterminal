@@ -712,30 +712,23 @@ with tab1:
         raw = fetch_sector_quotes(sector_tickers)
         raw_valid = raw.dropna(subset=["Var. %"])
         if not raw_valid.empty:
-            fig_heat = go.Figure(go.Treemap(
-                labels=raw_valid["Ticker"],
-                parents=[""] * len(raw_valid),
-                values=[max(abs(v), 0.01) for v in raw_valid["Var. %"]],
-                customdata=raw_valid[["Empresa", "Var. %"]].values,
-                hovertemplate="<b>%{label}</b><br>%{customdata[0]}<br>Var: %{customdata[1]:+.2f}%<extra></extra>",
-                marker=dict(
-                    colors=raw_valid["Var. %"],
-                    colorscale=[
-                        [0.0, "#7f1d1d"], [0.3, "#dc2626"],
-                        [0.5, "#1a2d4a"],
-                        [0.7, "#16a34a"], [1.0, "#14532d"],
-                    ],
-                    cmid=0,
-                    showscale=True,
-                    colorbar=dict(
-                        title="Var. %", thickness=12,
-                        tickfont=dict(color="#8fadc8"),
-                        titlefont=dict(color="#8fadc8"),
-                    ),
-                ),
-                texttemplate="<b>%{label}</b><br>%{customdata[1]:+.1f}%",
-                textfont=dict(color="white", size=13),
-            ))
+fig_heat = go.Figure(go.Treemap(
+    labels=raw_valid["Ticker"],
+    parents=[""] * len(raw_valid),
+    values=[max(abs(v), 0.01) for v in raw_valid["Var. %"]],
+    customdata=raw_valid[["Empresa", "Var. %"]].values,
+    hovertemplate="<b>%{label}</b><br>%{customdata[0]}<br>Var: %{customdata[1]:+.2f}%<extra></extra>",
+    marker=dict(
+        colors=raw_valid["Var. %"],
+        colorscale=[
+            [0.0, "#7f1d1d"], [0.3, "#dc2626"],
+            [0.5, "#1a2d4a"],
+            [0.7, "#16a34a"], [1.0, "#14532d"],
+        ],
+        cmid=0,
+    ),
+    texttemplate="<b>%{label}</b><br>%{customdata[1]:+.1f}%",
+))
             fig_heat.update_layout(
                 **{k: v for k, v in CHART_THEME.items() if k != "hovermode"},
                 height=320,
