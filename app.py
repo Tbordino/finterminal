@@ -432,6 +432,15 @@ CHART_THEME = dict(
     hovermode="x unified",
 )
 
+# Tema base sin propiedades de ejes — compatible con todos los tipos de gráfico
+BASE_THEME = dict(
+    paper_bgcolor="#06090f",
+    plot_bgcolor="#06090f",
+    font=dict(color="#8fadc8", family="Inter, sans-serif", size=11),
+    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1a2d4a", borderwidth=1),
+    margin=dict(l=10, r=10, t=40, b=10),
+)
+
 
 def plot_candlestick(df: pd.DataFrame, ticker: str, sma20=None, sma50=None) -> go.Figure:
     """Gráfico de velas OHLC con SMA overlay."""
@@ -510,10 +519,12 @@ def plot_comparison(tickers: list, period: str = "6mo") -> go.Figure:
 
     fig.add_hline(y=0, line_color="#1a2d4a", line_width=1)
     fig.update_layout(
-        **CHART_THEME,
+        **BASE_THEME,
         title=dict(text="<b>Comparador de Rendimiento</b> (base 100)",
                    font=dict(color="#e8f0fe", size=14)),
-        yaxis_title="Rendimiento %",
+        xaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
+        yaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e", title="Rendimiento %"),
+        hovermode="x unified",
         height=460,
     )
     return fig
@@ -538,9 +549,11 @@ def plot_rsi(df: pd.DataFrame) -> go.Figure:
     fig.add_hline(y=70, line_color="#ef4444", line_width=1, line_dash="dash")
     fig.add_hline(y=30, line_color="#22c55e", line_width=1, line_dash="dash")
     fig.update_layout(
-        **CHART_THEME,
+        **BASE_THEME,
         title=dict(text="RSI (14)", font=dict(color="#e8f0fe", size=13)),
+        xaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
         yaxis=dict(range=[0, 100], gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
+        hovermode="x unified",
         height=180,
         margin=dict(l=10, r=10, t=35, b=10),
     )
