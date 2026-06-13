@@ -407,19 +407,55 @@ def fetch_quote(ticker: str) -> dict:
         volume = hist["Volume"].iloc[-1] if "Volume" in hist.columns else 0
 
         return {
-            "ticker":       ticker,
-            "name":         info.get("shortName", ticker),
-            "price":        round(last_close, 2),
-            "change_pct":   round(change_pct, 2),
-            "volume":       int(volume),
-            "mktcap":       info.get("marketCap"),
-            "pe":           info.get("trailingPE"),
-            "eps":          info.get("trailingEps"),
-            "dividend":     info.get("dividendYield"),
-            "beta":         info.get("beta"),
-            "52wHigh":      info.get("fiftyTwoWeekHigh"),
-            "52wLow":       info.get("fiftyTwoWeekLow"),
-            "currency":     info.get("currency", "USD"),
+            # Precio & mercado
+            "ticker":           ticker,
+            "name":             info.get("shortName", ticker),
+            "price":            round(last_close, 2),
+            "change_pct":       round(change_pct, 2),
+            "volume":           int(volume),
+            "mktcap":           info.get("marketCap"),
+            "currency":         info.get("currency", "USD"),
+            "52wHigh":          info.get("fiftyTwoWeekHigh"),
+            "52wLow":           info.get("fiftyTwoWeekLow"),
+            "beta":             info.get("beta"),
+            "float_shares":     info.get("floatShares"),
+            "avg_volume":       info.get("averageVolume"),
+            # Valuación
+            "pe":               info.get("trailingPE"),
+            "forward_pe":       info.get("forwardPE"),
+            "peg":              info.get("pegRatio"),
+            "pb":               info.get("priceToBook"),
+            "ps":               info.get("priceToSalesTrailing12Months"),
+            "ev_ebitda":        info.get("enterpriseToEbitda"),
+            "ev":               info.get("enterpriseValue"),
+            "eps":              info.get("trailingEps"),
+            "forward_eps":      info.get("forwardEps"),
+            # Dividendos
+            "dividend":         info.get("dividendYield"),
+            "dividend_rate":    info.get("dividendRate"),
+            "payout_ratio":     info.get("payoutRatio"),
+            # Rentabilidad
+            "roe":              info.get("returnOnEquity"),
+            "roa":              info.get("returnOnAssets"),
+            "margin_net":       info.get("profitMargins"),
+            "margin_op":        info.get("operatingMargins"),
+            "margin_gross":     info.get("grossMargins"),
+            "revenue":          info.get("totalRevenue"),
+            "ebitda":           info.get("ebitda"),
+            "revenue_growth":   info.get("revenueGrowth"),
+            "earnings_growth":  info.get("earningsGrowth"),
+            # Deuda & solvencia
+            "debt_equity":      info.get("debtToEquity"),
+            "current_ratio":    info.get("currentRatio"),
+            "quick_ratio":      info.get("quickRatio"),
+            "total_debt":       info.get("totalDebt"),
+            "cash":             info.get("totalCash"),
+            # Analistas
+            "target_price":     info.get("targetMeanPrice"),
+            "target_high":      info.get("targetHighPrice"),
+            "target_low":       info.get("targetLowPrice"),
+            "recommendation":   info.get("recommendationKey", ""),
+            "num_analysts":     info.get("numberOfAnalystOpinions"),
         }
     except Exception:
         return None
@@ -915,26 +951,104 @@ with tab2:
             st.error(f"⚠️ No se pudieron obtener datos para **{selected_ticker}**. "
                      f"El ticker puede estar caído o fuera de horario.")
         else:
-            # ── KPIs header ──
-            c1, c2, c3, c4, c5 = st.columns(5)
-            currency = quote.get("currency", "")
-            c1.metric("Precio",   f"{currency} {quote['price']:,.2f}")
-            c2.metric("Var. Día", f"{quote['change_pct']:+.2f}%",
-                      delta=f"{quote['change_pct']:+.2f}%")
-            c3.metric("P/E Ratio", f"{quote['pe']:.1f}" if quote['pe'] else "N/D")
-            c4.metric("EPS",      f"{quote['eps']:.2f}" if quote['eps'] else "N/D")
-            c5.metric("Beta",     f"{quote['beta']:.2f}" if quote['beta'] else "N/D")
+            currency = quote.get("currency", "USD")
 
-            c6, c7, c8, c9, c10 = st.columns(5)
-            c6.metric("Cap. Mercado",   fmt_large(quote['mktcap']))
-            c7.metric("Div. Yield",
-                      f"{quote['dividend']*100:.2f}%" if quote['dividend'] else "N/D")
-            c8.metric("Máx 52 sem",
-                      f"{currency} {quote['52wHigh']:,.2f}" if quote['52wHigh'] else "N/D")
-            c9.metric("Mín 52 sem",
-                      f"{currency} {quote['52wLow']:,.2f}" if quote['52wLow'] else "N/D")
-            vol_24h = quote.get("volume", 0)
-            c10.metric("Volumen",       f"{vol_24h:,}" if vol_24h else "N/D")
+            def fv(val, fmt=".2f", suffix="", prefix=""):
+                """Formatea un valor o devuelve N/D."""
+                if val is None or (isinstance(val, float) and (val != val)):
+                    return "N/D"
+                try:
+                    return f"{prefix}{val:{fmt}}{suffix}"
+                except Exception:
+                    return "N/D"
+
+            def fpct(val):
+                return fv(val * 100, ".1f", "%") if val is not None else "N/D"
+
+            def frec(key):
+                MAP = {
+                    "strong_buy": "🟢 Compra Fuerte", "buy": "🟢 Compra",
+                    "hold": "🟡 Mantener", "underperform": "🔴 Subperforma",
+                    "sell": "🔴 Vender", "": "N/D",
+                }
+                return MAP.get(str(key).lower(), str(key).title()) if key else "N/D"
+
+            # ── Fila 0: Header precio ──
+            h1, h2, h3, h4, h5, h6 = st.columns(6)
+            h1.metric("Precio",        f"{currency} {quote['price']:,.2f}")
+            h2.metric("Var. Día",      f"{quote['change_pct']:+.2f}%", delta=f"{quote['change_pct']:+.2f}%")
+            h3.metric("Cap. Mercado",  fmt_large(quote['mktcap']))
+            h4.metric("Volumen",       f"{quote['volume']:,}" if quote['volume'] else "N/D")
+            h5.metric("Máx 52 sem",    fv(quote['52wHigh'], ",.2f", prefix=f"{currency} "))
+            h6.metric("Mín 52 sem",    fv(quote['52wLow'],  ",.2f", prefix=f"{currency} "))
+
+            st.markdown("---")
+
+            # ── Tarjeta 1: Valuación ──
+            st.markdown('<div class="section-title">📊 Ratios de Valuación</div>', unsafe_allow_html=True)
+            v1, v2, v3, v4, v5, v6, v7 = st.columns(7)
+            v1.metric("P/E (trailing)",   fv(quote['pe'],       ".1f", "x"))
+            v2.metric("P/E (forward)",    fv(quote['forward_pe'],".1f","x"))
+            v3.metric("PEG Ratio",        fv(quote['peg'],      ".2f", "x"))
+            v4.metric("P/Book",           fv(quote['pb'],       ".2f", "x"))
+            v5.metric("P/Sales",          fv(quote['ps'],       ".2f", "x"))
+            v6.metric("EV/EBITDA",        fv(quote['ev_ebitda'],".1f","x"))
+            v7.metric("EPS (forward)",    fv(quote['forward_eps'],".2f", prefix=f"{currency} "))
+
+            st.markdown("---")
+
+            # ── Tarjeta 2: Rentabilidad ──
+            st.markdown('<div class="section-title">💰 Rentabilidad & Crecimiento</div>', unsafe_allow_html=True)
+            r1, r2, r3, r4, r5, r6, r7 = st.columns(7)
+            r1.metric("ROE",            fpct(quote['roe']))
+            r2.metric("ROA",            fpct(quote['roa']))
+            r3.metric("Margen Bruto",   fpct(quote['margin_gross']))
+            r4.metric("Margen Op.",     fpct(quote['margin_op']))
+            r5.metric("Margen Neto",    fpct(quote['margin_net']))
+            r6.metric("Crec. Revenue",  fpct(quote['revenue_growth']))
+            r7.metric("Crec. EPS",      fpct(quote['earnings_growth']))
+
+            st.markdown("---")
+
+            # ── Tarjeta 3: Deuda & Solvencia ──
+            st.markdown('<div class="section-title">🏦 Deuda & Solvencia</div>', unsafe_allow_html=True)
+            d1, d2, d3, d4, d5, d6 = st.columns(6)
+            d1.metric("Deuda/Equity",   fv(quote['debt_equity'], ".2f", "x"))
+            d2.metric("Current Ratio",  fv(quote['current_ratio'],".2f","x"))
+            d3.metric("Quick Ratio",    fv(quote['quick_ratio'],  ".2f","x"))
+            d4.metric("Deuda Total",    fmt_large(quote['total_debt']))
+            d5.metric("Caja & Equiv.",  fmt_large(quote['cash']))
+            d6.metric("Beta",           fv(quote['beta'], ".2f"))
+
+            st.markdown("---")
+
+            # ── Tarjeta 4: Dividendos & Analistas ──
+            st.markdown('<div class="section-title">🎯 Dividendos & Consenso de Analistas</div>', unsafe_allow_html=True)
+            a1, a2, a3, a4, a5, a6, a7 = st.columns(7)
+            a1.metric("Div. Yield",       fpct(quote['dividend']))
+            a2.metric("Div. Rate",        fv(quote['dividend_rate'], ".2f", prefix=f"{currency} "))
+            a3.metric("Payout Ratio",     fpct(quote['payout_ratio']))
+            a4.metric("Target Precio",    fv(quote['target_price'], ",.2f", prefix=f"{currency} "))
+            a5.metric("Target Máx",       fv(quote['target_high'],  ",.2f", prefix=f"{currency} "))
+            a6.metric("Target Mín",       fv(quote['target_low'],   ",.2f", prefix=f"{currency} "))
+            a7.metric("Consenso",         frec(quote['recommendation']))
+
+            # Upside/downside vs target
+            if quote['target_price'] and quote['price']:
+                upside = ((quote['target_price'] / quote['price']) - 1) * 100
+                color_up = "#22c55e" if upside > 0 else "#ef4444"
+                arrow = "▲" if upside > 0 else "▼"
+                n_analysts = quote.get('num_analysts') or 0
+                st.markdown(
+                    f'<div style="margin-top:0.5rem;padding:0.6rem 1rem;background:#0d1526;'
+                    f'border:1px solid #1a2d4a;border-radius:8px;display:inline-block;">'
+                    f'<span style="color:#5a7fa8;font-size:0.75rem;">UPSIDE VS. TARGET CONSENSO &nbsp;</span>'
+                    f'<span style="color:{color_up};font-weight:700;font-size:1.1rem;">'
+                    f'{arrow} {upside:+.1f}%</span>'
+                    f'<span style="color:#3a5a80;font-size:0.72rem;margin-left:1rem;">'
+                    f'Basado en {n_analysts} analistas</span></div>',
+                    unsafe_allow_html=True,
+                )
 
             st.markdown("---")
 
