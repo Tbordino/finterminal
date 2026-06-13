@@ -211,64 +211,180 @@ st.markdown("""
 SP500_UNIVERSE = {
     "Tecnología": {
         "AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "NVIDIA", "GOOGL": "Alphabet",
-        "META": "Meta", "AMZN": "Amazon", "AMD": "AMD", "INTC": "Intel",
-        "CRM": "Salesforce", "ORCL": "Oracle",
+        "META": "Meta Platforms", "AMZN": "Amazon", "AMD": "AMD", "INTC": "Intel",
+        "CRM": "Salesforce", "ORCL": "Oracle", "ADBE": "Adobe", "CSCO": "Cisco",
+        "QCOM": "Qualcomm", "TXN": "Texas Instruments", "AVGO": "Broadcom",
+        "NOW": "ServiceNow", "SNOW": "Snowflake", "PLTR": "Palantir",
+        "MU": "Micron", "AMAT": "Applied Materials", "LRCX": "Lam Research",
+        "KLAC": "KLA Corp", "MRVL": "Marvell", "FTNT": "Fortinet",
+        "PANW": "Palo Alto Networks", "CRWD": "CrowdStrike", "ZS": "Zscaler",
+        "DDOG": "Datadog", "NET": "Cloudflare", "TEAM": "Atlassian",
+        "SHOP": "Shopify", "WDAY": "Workday", "INTU": "Intuit",
+        "ADSK": "Autodesk", "ANSS": "Ansys", "CDNS": "Cadence",
+        "SNPS": "Synopsys", "HPQ": "HP Inc", "DELL": "Dell Technologies",
     },
     "Finanzas": {
-        "JPM": "JPMorgan", "BAC": "Bank of America", "GS": "Goldman Sachs",
-        "MS": "Morgan Stanley", "WFC": "Wells Fargo", "BRK-B": "Berkshire",
+        "JPM": "JPMorgan Chase", "BAC": "Bank of America", "GS": "Goldman Sachs",
+        "MS": "Morgan Stanley", "WFC": "Wells Fargo", "BRK-B": "Berkshire Hathaway",
         "C": "Citigroup", "AXP": "American Express", "V": "Visa", "MA": "Mastercard",
+        "BLK": "BlackRock", "SCHW": "Charles Schwab", "COF": "Capital One",
+        "USB": "U.S. Bancorp", "PNC": "PNC Financial", "TFC": "Truist Financial",
+        "CB": "Chubb", "MMC": "Marsh McLennan", "AON": "Aon",
+        "ICE": "Intercontinental Exchange", "CME": "CME Group", "SPGI": "S&P Global",
+        "MCO": "Moody's", "MSCI": "MSCI Inc", "FIS": "Fidelity National",
+        "FISV": "Fiserv", "PYPL": "PayPal", "SQ": "Block Inc",
+        "HOOD": "Robinhood", "NU": "Nu Holdings", "MELI": "MercadoLibre",
     },
     "Energía": {
         "XOM": "ExxonMobil", "CVX": "Chevron", "COP": "ConocoPhillips",
         "EOG": "EOG Resources", "SLB": "SLB", "MPC": "Marathon Petroleum",
-        "PSX": "Phillips 66", "VLO": "Valero", "OXY": "Occidental", "HAL": "Halliburton",
+        "PSX": "Phillips 66", "VLO": "Valero Energy", "OXY": "Occidental Petroleum",
+        "HAL": "Halliburton", "DVN": "Devon Energy", "FANG": "Diamondback Energy",
+        "HES": "Hess Corp", "BKR": "Baker Hughes", "CTRA": "Coterra Energy",
+        "APA": "APA Corp", "MRO": "Marathon Oil", "NOV": "NOV Inc",
+        "NEE": "NextEra Energy", "DUK": "Duke Energy", "SO": "Southern Company",
+        "D": "Dominion Energy", "AEP": "American Electric Power",
     },
     "Salud": {
         "JNJ": "Johnson & Johnson", "UNH": "UnitedHealth", "LLY": "Eli Lilly",
         "PFE": "Pfizer", "ABBV": "AbbVie", "MRK": "Merck", "TMO": "Thermo Fisher",
-        "ABT": "Abbott", "BMY": "Bristol-Myers", "AMGN": "Amgen",
+        "ABT": "Abbott Labs", "BMY": "Bristol-Myers Squibb", "AMGN": "Amgen",
+        "GILD": "Gilead Sciences", "ISRG": "Intuitive Surgical", "SYK": "Stryker",
+        "MDT": "Medtronic", "BSX": "Boston Scientific", "ZBH": "Zimmer Biomet",
+        "REGN": "Regeneron", "VRTX": "Vertex Pharma", "BIIB": "Biogen",
+        "MRNA": "Moderna", "BNTX": "BioNTech", "CVS": "CVS Health",
+        "CI": "Cigna", "HUM": "Humana", "CNC": "Centene", "MOH": "Molina Healthcare",
+        "IQV": "IQVIA", "A": "Agilent", "DHR": "Danaher", "BAX": "Baxter",
     },
     "Consumo Discrecional": {
         "TSLA": "Tesla", "HD": "Home Depot", "MCD": "McDonald's", "NKE": "Nike",
         "SBUX": "Starbucks", "TGT": "Target", "LOW": "Lowe's", "F": "Ford",
-        "GM": "General Motors", "BKNG": "Booking Holdings",
+        "GM": "General Motors", "BKNG": "Booking Holdings", "ABNB": "Airbnb",
+        "UBER": "Uber", "LYFT": "Lyft", "CMG": "Chipotle", "YUM": "Yum! Brands",
+        "QSR": "Restaurant Brands", "DPZ": "Domino's", "DKNG": "DraftKings",
+        "MGM": "MGM Resorts", "LVS": "Las Vegas Sands", "WYNN": "Wynn Resorts",
+        "RCL": "Royal Caribbean", "CCL": "Carnival", "MAR": "Marriott",
+        "HLT": "Hilton", "DHI": "D.R. Horton", "LEN": "Lennar", "PHM": "PulteGroup",
+        "ROST": "Ross Stores", "TJX": "TJX Companies", "BBY": "Best Buy",
     },
     "Consumo Básico": {
         "PG": "Procter & Gamble", "KO": "Coca-Cola", "PEP": "PepsiCo",
         "WMT": "Walmart", "COST": "Costco", "PM": "Philip Morris",
-        "MO": "Altria", "CL": "Colgate", "GIS": "General Mills", "K": "Kellanova",
+        "MO": "Altria", "CL": "Colgate-Palmolive", "GIS": "General Mills",
+        "K": "Kellanova", "KHC": "Kraft Heinz", "MDLZ": "Mondelez",
+        "HSY": "Hershey", "CAG": "ConAgra", "CPB": "Campbell Soup",
+        "SJM": "J.M. Smucker", "MKC": "McCormick", "CHD": "Church & Dwight",
+        "CLX": "Clorox", "KMB": "Kimberly-Clark", "EL": "Estee Lauder",
+        "ULTA": "Ulta Beauty", "COTY": "Coty Inc", "KR": "Kroger",
+    },
+    "Industriales": {
+        "BA": "Boeing", "CAT": "Caterpillar", "GE": "GE Aerospace",
+        "HON": "Honeywell", "UPS": "UPS", "FDX": "FedEx", "LMT": "Lockheed Martin",
+        "RTX": "RTX Corp", "NOC": "Northrop Grumman", "GD": "General Dynamics",
+        "MMM": "3M", "EMR": "Emerson Electric", "ETN": "Eaton",
+        "PH": "Parker Hannifin", "ROK": "Rockwell Automation", "IR": "Ingersoll Rand",
+        "XYL": "Xylem", "AME": "AMETEK", "ROP": "Roper Technologies",
+        "CSGP": "CoStar Group", "WAB": "Wabtec", "CSX": "CSX Corp",
+        "NSC": "Norfolk Southern", "UNP": "Union Pacific", "DAL": "Delta Air Lines",
+        "UAL": "United Airlines", "AAL": "American Airlines", "LUV": "Southwest Airlines",
+    },
+    "Materiales": {
+        "LIN": "Linde", "APD": "Air Products", "SHW": "Sherwin-Williams",
+        "FCX": "Freeport-McMoRan", "NEM": "Newmont", "NUE": "Nucor",
+        "STLD": "Steel Dynamics", "ALB": "Albemarle", "CE": "Celanese",
+        "DD": "DuPont", "DOW": "Dow Inc", "LYB": "LyondellBasell",
+        "PPG": "PPG Industries", "RPM": "RPM International", "ECL": "Ecolab",
+        "IFF": "IFF", "MOS": "Mosaic", "CF": "CF Industries",
+    },
+    "Real Estate (REITs)": {
+        "AMT": "American Tower", "PLD": "Prologis", "CCI": "Crown Castle",
+        "EQIX": "Equinix", "PSA": "Public Storage", "EXR": "Extra Space Storage",
+        "AVB": "AvalonBay", "EQR": "Equity Residential", "MAA": "Mid-America Apt",
+        "SPG": "Simon Property", "O": "Realty Income", "VICI": "VICI Properties",
+        "WELL": "Welltower", "VTR": "Ventas", "MPW": "Medical Properties",
+        "DLR": "Digital Realty", "ARE": "Alexandria Real Estate",
+    },
+    "Comunicaciones": {
+        "NFLX": "Netflix", "DIS": "Walt Disney", "CMCSA": "Comcast",
+        "T": "AT&T", "VZ": "Verizon", "TMUS": "T-Mobile", "CHTR": "Charter Comm",
+        "PARA": "Paramount", "WBD": "Warner Bros Discovery", "FOX": "Fox Corp",
+        "SPOT": "Spotify", "SNAP": "Snap", "PINS": "Pinterest", "RDDT": "Reddit",
+        "X": "X Holdings", "MTCH": "Match Group", "ZM": "Zoom", "TWLO": "Twilio",
     },
     "ETFs / Índices": {
         "SPY": "S&P 500 ETF", "QQQ": "Nasdaq 100 ETF", "IWM": "Russell 2000 ETF",
-        "GLD": "Gold ETF", "TLT": "Treasury Bonds ETF", "VIX": "Volatility Index",
-        "EEM": "Emerging Markets ETF", "DIA": "Dow Jones ETF",
+        "GLD": "Gold ETF", "TLT": "Treasury Bonds ETF", "EEM": "Emerging Markets ETF",
+        "DIA": "Dow Jones ETF", "VTI": "Total Market ETF", "VOO": "Vanguard S&P 500",
+        "VGK": "Europe ETF", "EWJ": "Japan ETF", "FXI": "China ETF",
+        "XLK": "Tech Sector ETF", "XLF": "Financial Sector ETF",
+        "XLE": "Energy Sector ETF", "XLV": "Health Sector ETF",
+        "XLI": "Industrial ETF", "XLY": "Consumer Disc ETF",
+        "SLV": "Silver ETF", "USO": "Oil ETF", "BTC-USD": "Bitcoin",
+        "ETH-USD": "Ethereum",
     },
 }
 
 MERVAL_UNIVERSE = {
     "Bancos": {
-        "GGAL.BA": "Galicia", "BMA.BA": "Macro", "BBAR.BA": "BBVA Argentina",
-        "SUPV.BA": "Supervielle", "BHIP.BA": "Hipotecario", "BPAT.BA": "Patagonia",
+        "GGAL.BA": "Grupo Galicia", "BMA.BA": "Banco Macro", "BBAR.BA": "BBVA Argentina",
+        "SUPV.BA": "Supervielle", "BHIP.BA": "Banco Hipotecario", "BPAT.BA": "Banco Patagonia",
+        "BYMA.BA": "BYMA", "VALO.BA": "Grupo Financiero Valores",
     },
     "Energía & Petróleo": {
         "YPF.BA": "YPF", "PAMP.BA": "Pampa Energía", "TGNO4.BA": "TGN",
-        "TGSU2.BA": "TGS", "CGPA2.BA": "Capex", "VALO.BA": "Valo",
-        "METR.BA": "MetroGAS", "GARO.BA": "Garovaglio",
+        "TGSU2.BA": "TGS", "CGPA2.BA": "Capex", "METR.BA": "MetroGAS",
+        "GARO.BA": "Garovaglio & Zorraquín", "AUSO.BA": "Autopistas del Sol",
+        "DGCU2.BA": "Distrib. Gas Cuyana", "DGCE.BA": "Dist. Gas Centro",
+    },
+    "Electricidad": {
+        "CEPU.BA": "Central Puerto", "EDN.BA": "Edenor", "TRAN.BA": "Transener",
+        "CECO2.BA": "Central Costanera", "HARG.BA": "Holcim Argentina",
+        "PATA.BA": "Patagonia Gold",
     },
     "Real Estate & Construcción": {
-        "IRSA.BA": "IRSA", "BYMA.BA": "BYMA", "CRES.BA": "Cresud",
-        "INTR.BA": "Intratex", "DGCU2.BA": "Distribuidora Gas Cuyana",
+        "IRSA.BA": "IRSA Prop. Comerciales", "IRCP.BA": "IRSA Inversiones",
+        "CRES.BA": "Cresud", "DYCA.BA": "Dycasa", "CTIO.BA": "Consultatio",
     },
     "Consumo & Retail": {
-        "ALUA.BA": "Aluar", "MIRG.BA": "Mirgor", "MOLI.BA": "Molinos Río",
-        "AGRO.BA": "AgroIndustria", "HARG.BA": "Holcim",
+        "MIRG.BA": "Mirgor", "MOLI.BA": "Molinos Río de la Plata",
+        "MOLA.BA": "Molinos Agro", "BRIG.BA": "Briggs & Stratton Arg",
+        "POLL.BA": "Polledo", "LONG.BA": "Longvie",
+        "GAMI.BA": "Gamer Corporation", "SEMI.BA": "Instituto Rosenbusch",
+    },
+    "Agro & Alimentos": {
+        "AGRO.BA": "Agrometal", "SAMI.BA": "San Miguel",
+        "MORI.BA": "Morixe Hnos", "GCDI.BA": "GCDI",
+        "CADO.BA": "Cadoppi", "INTR.BA": "Intratex",
     },
     "Telecomunicaciones": {
-        "TECO2.BA": "Telecom", "CEPU.BA": "Central Puerto", "EDN.BA": "Edenor",
+        "TECO2.BA": "Telecom Argentina", "TECO.BA": "Telecom (ord)",
+        "CABR.BA": "Cablevision Holding",
     },
-    "Acero & Industria": {
-        "ERAR.BA": "Ternium", "LOMA.BA": "Loma Negra",
+    "Acero, Minería & Industria": {
+        "ERAR.BA": "Ternium Argentina", "LOMA.BA": "Loma Negra",
+        "ALUA.BA": "Aluar", "BOLT.BA": "Boldt",
+        "GBAN.BA": "Gas Natural BAN", "FERR.BA": "Ferrum",
+        "RIGO.BA": "Rigolleau", "ROSE.BA": "Rosario Puerto",
+    },
+    "Salud & Pharma": {
+        "GRIM.BA": "Grimoldi", "BIOL.BA": "Bioceres Crop",
+        "INVJ.BA": "Inversora Juramento",
+    },
+    "Medios & Tecnología": {
+        "TXAR.BA": "Transportadora Gas Sur", "HAVA.BA": "Havanna",
+        "ESME.BA": "Esmeba",
+    },
+    "CEDEARs Internacionales": {
+        "AAPL.BA": "Apple (CEDEAR)", "MSFT.BA": "Microsoft (CEDEAR)",
+        "AMZN.BA": "Amazon (CEDEAR)", "GOOGL.BA": "Alphabet (CEDEAR)",
+        "META.BA": "Meta (CEDEAR)", "NVDA.BA": "NVIDIA (CEDEAR)",
+        "TSLA.BA": "Tesla (CEDEAR)", "BRKB.BA": "Berkshire (CEDEAR)",
+        "KO.BA": "Coca-Cola (CEDEAR)", "DIS.BA": "Disney (CEDEAR)",
+        "MELI.BA": "MercadoLibre (CEDEAR)", "GLD.BA": "Gold ETF (CEDEAR)",
+        "SPY.BA": "S&P 500 ETF (CEDEAR)", "QQQ.BA": "Nasdaq ETF (CEDEAR)",
+        "BRK.BA": "Berkshire B (CEDEAR)", "GOLD.BA": "Barrick Gold (CEDEAR)",
+        "AXP.BA": "Amex (CEDEAR)", "IBM.BA": "IBM (CEDEAR)",
+        "JNJ.BA": "J&J (CEDEAR)", "XOM.BA": "ExxonMobil (CEDEAR)",
     },
 }
 
@@ -638,6 +754,16 @@ with st.sidebar:
     )
 
     st.markdown("---")
+    st.markdown('<div style="color:#7fa3d0;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem;">🔍 BUSCADOR POR TICKER</div>', unsafe_allow_html=True)
+    manual_ticker = st.text_input(
+        label="Ticker manual",
+        placeholder="Ej: TSLA, GGAL.BA, BTC-USD",
+        label_visibility="collapsed",
+    ).strip().upper()
+    if manual_ticker:
+        st.caption(f"Analizando ticker: **{manual_ticker}**")
+
+    st.markdown("---")
     st.markdown("""
     <div style="color:#2a4060;font-size:0.68rem;line-height:1.6;">
     📡 Datos: Yahoo Finance<br>
@@ -755,7 +881,7 @@ with tab1:
                 height=320,
                 margin=dict(l=0, r=0, t=0, b=0),
             )
-            st.plotly_chart(fig_heat, use_container_width=True, key="chart_heat")
+            st.plotly_chart(fig_heat, use_container_width=True)
 
 
 # ═════════════════════════════════════════════════════════════
@@ -764,11 +890,21 @@ with tab1:
 with tab2:
     # sector_tickers = {ticker: nombre} → invertimos para buscar por nombre
     _name_to_ticker2 = {v: k for k, v in sector_tickers.items()}
-    if selected_name == "— Seleccioná un activo —":
-        st.info("👈 Seleccioná un activo desde el panel lateral para ver su análisis.")
-    elif selected_name in _name_to_ticker2:
+    # El buscador manual tiene prioridad sobre el selector
+    if manual_ticker:
+        selected_ticker = manual_ticker
+        selected_name_display = manual_ticker
+    elif selected_name != "— Seleccioná un activo —" and selected_name in _name_to_ticker2:
         selected_ticker = _name_to_ticker2[selected_name]
-        st.markdown(f'<div class="section-title">{selected_ticker} — {selected_name} · Análisis Técnico</div>',
+        selected_name_display = selected_name
+    else:
+        selected_ticker = None
+        selected_name_display = None
+
+    if not selected_ticker:
+        st.info("👈 Seleccioná un activo desde el panel lateral o ingresá un ticker en el buscador.")
+    if selected_ticker:
+        st.markdown(f'<div class="section-title">{selected_ticker} — {selected_name_display} · Análisis Técnico</div>',
                     unsafe_allow_html=True)
 
         # Datos de cotización
@@ -828,12 +964,12 @@ with tab2:
                     sma20=signals.get("sma20") if show_sma else None,
                     sma50=signals.get("sma50") if show_sma else None,
                 )
-                st.plotly_chart(fig_candle, use_container_width=True, key="chart_candle_tab2")
+                st.plotly_chart(fig_candle, use_container_width=True)
 
                 # RSI (solo para períodos > 5D)
                 if period_label not in ["1D", "5D"] and len(df_hist) >= 15:
                     fig_rsi = plot_rsi(df_hist)
-                    st.plotly_chart(fig_rsi, use_container_width=True, key="chart_rsi_tab2")
+                    st.plotly_chart(fig_rsi, use_container_width=True)
 
                 # Stats del período
                 st.markdown("---")
@@ -898,7 +1034,7 @@ with tab3:
     else:
         with st.spinner("Descargando datos para comparación…"):
             fig_comp = plot_comparison(selected_tickers_comp, period=yf_comp_period)
-        st.plotly_chart(fig_comp, use_container_width=True, key="chart_comp")
+        st.plotly_chart(fig_comp, use_container_width=True)
 
         # Tabla de métricas comparativas
         st.markdown("---")
@@ -947,11 +1083,20 @@ with tab4:
     st.markdown('<div class="section-title">Sistema de Recomendación Cuantitativa</div>',
                 unsafe_allow_html=True)
 
-    if selected_name == "— Seleccioná un activo —":
-        st.info("👈 Seleccioná un activo desde el panel lateral para ver su señal.")
-    elif selected_name in _name_to_ticker2:
+    if manual_ticker:
+        selected_ticker_q = manual_ticker
+        selected_name_q = manual_ticker
+    elif selected_name != "— Seleccioná un activo —" and selected_name in _name_to_ticker2:
         selected_ticker_q = _name_to_ticker2[selected_name]
-        st.caption(f"Analizando: **{selected_ticker_q}** — {selected_name}")
+        selected_name_q = selected_name
+    else:
+        selected_ticker_q = None
+        selected_name_q = None
+
+    if not selected_ticker_q:
+        st.info("👈 Seleccioná un activo desde el panel lateral o ingresá un ticker en el buscador.")
+    if selected_ticker_q:
+        st.caption(f"Analizando: **{selected_ticker_q}** — {selected_name_q}")
 
         with st.spinner("Calculando indicadores técnicos…"):
             df_signal = fetch_ohlcv(selected_ticker_q, period="1y")
@@ -1008,11 +1153,11 @@ with tab4:
                 sma20=signals.get("sma20"),
                 sma50=signals.get("sma50"),
             )
-            st.plotly_chart(fig_sig, use_container_width=True, key="chart_sig")
+            st.plotly_chart(fig_sig, use_container_width=True)
 
             # RSI panel
             if len(df_signal) >= 15:
-                st.plotly_chart(plot_rsi(df_signal), use_container_width=True, key="chart_rsi_tab4")
+                st.plotly_chart(plot_rsi(df_signal), use_container_width=True)
 
         # ── Disclaimer ──
         st.markdown("---")
