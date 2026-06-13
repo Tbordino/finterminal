@@ -94,6 +94,36 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
 
+    /* ── Ratios (texto reducido) ── */
+    .ratio-block [data-testid="metric-container"] {
+        padding: 0.6rem 0.8rem !important;
+    }
+    .ratio-block [data-testid="metric-container"] label {
+        font-size: 0.62rem !important;
+    }
+    .ratio-block [data-testid="metric-container"] [data-testid="stMetricValue"] {
+        font-size: 0.95rem !important;
+    }
+
+    /* ── Section card ── */
+    .ratio-card {
+        background: #0a111f;
+        border: 1px solid #1a2d4a;
+        border-radius: 10px;
+        padding: 0.8rem 1rem 0.6rem 1rem;
+        margin-bottom: 0.8rem;
+    }
+    .ratio-card-title {
+        color: #4a9eff;
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.6rem;
+        padding-bottom: 0.3rem;
+        border-bottom: 1px solid #1a2d4a;
+    }
+
     /* ── Tablas ── */
     .stDataFrame {
         border: 1px solid #1a2d4a;
@@ -984,72 +1014,85 @@ with tab2:
 
             st.markdown("---")
 
-            # ── Tarjeta 1: Valuación ──
-            st.markdown('<div class="section-title">📊 Ratios de Valuación</div>', unsafe_allow_html=True)
-            v1, v2, v3, v4, v5, v6, v7 = st.columns(7)
-            v1.metric("P/E (trailing)",   fv(quote['pe'],       ".1f", "x"))
-            v2.metric("P/E (forward)",    fv(quote['forward_pe'],".1f","x"))
-            v3.metric("PEG Ratio",        fv(quote['peg'],      ".2f", "x"))
-            v4.metric("P/Book",           fv(quote['pb'],       ".2f", "x"))
-            v5.metric("P/Sales",          fv(quote['ps'],       ".2f", "x"))
-            v6.metric("EV/EBITDA",        fv(quote['ev_ebitda'],".1f","x"))
-            v7.metric("EPS (forward)",    fv(quote['forward_eps'],".2f", prefix=f"{currency} "))
+            # Corrección Div. Yield (Yahoo a veces devuelve payout en ese campo)
+            div_yield = quote.get('dividend')
+            if div_yield and div_yield > 0.5:
+                div_yield = None  # Valor anómalo, descartamos
 
-            st.markdown("---")
+            st.markdown('<div class="ratio-block">', unsafe_allow_html=True)
 
-            # ── Tarjeta 2: Rentabilidad ──
-            st.markdown('<div class="section-title">💰 Rentabilidad & Crecimiento</div>', unsafe_allow_html=True)
-            r1, r2, r3, r4, r5, r6, r7 = st.columns(7)
+            # ── Card 1: Valuación (2 filas × 4 col) ──
+            st.markdown('<div class="ratio-card"><div class="ratio-card-title">📊 Ratios de Valuación</div>', unsafe_allow_html=True)
+            v1, v2, v3, v4 = st.columns(4)
+            v1.metric("P/E Trailing",   fv(quote['pe'],        ".1f", "x"))
+            v2.metric("P/E Forward",    fv(quote['forward_pe'],".1f", "x"))
+            v3.metric("PEG Ratio",      fv(quote['peg'],       ".2f", "x"))
+            v4.metric("P/Book",         fv(quote['pb'],        ".2f", "x"))
+            v5, v6, v7, v8 = st.columns(4)
+            v5.metric("P/Sales",        fv(quote['ps'],        ".2f", "x"))
+            v6.metric("EV/EBITDA",      fv(quote['ev_ebitda'], ".1f", "x"))
+            v7.metric("EPS Trailing",   fv(quote['eps'],       ".2f", prefix=f"{currency} "))
+            v8.metric("EPS Forward",    fv(quote['forward_eps'],".2f",prefix=f"{currency} "))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # ── Card 2: Rentabilidad (2 filas × 4 col) ──
+            st.markdown('<div class="ratio-card"><div class="ratio-card-title">💰 Rentabilidad & Crecimiento</div>', unsafe_allow_html=True)
+            r1, r2, r3, r4 = st.columns(4)
             r1.metric("ROE",            fpct(quote['roe']))
             r2.metric("ROA",            fpct(quote['roa']))
             r3.metric("Margen Bruto",   fpct(quote['margin_gross']))
             r4.metric("Margen Op.",     fpct(quote['margin_op']))
+            r5, r6, r7, r8 = st.columns(4)
             r5.metric("Margen Neto",    fpct(quote['margin_net']))
-            r6.metric("Crec. Revenue",  fpct(quote['revenue_growth']))
-            r7.metric("Crec. EPS",      fpct(quote['earnings_growth']))
+            r6.metric("Revenue",        fmt_large(quote.get('revenue')))
+            r7.metric("Crec. Revenue",  fpct(quote['revenue_growth']))
+            r8.metric("Crec. EPS",      fpct(quote['earnings_growth']))
+            st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown("---")
+            # ── Card 3: Deuda (1 fila × 4 col + upside) ──
+            st.markdown('<div class="ratio-card"><div class="ratio-card-title">🏦 Deuda & Solvencia</div>', unsafe_allow_html=True)
+            d1, d2, d3, d4 = st.columns(4)
+            d1.metric("Deuda/Equity",   fv(quote['debt_equity'],  ".1f", "x"))
+            d2.metric("Current Ratio",  fv(quote['current_ratio'],".2f", "x"))
+            d3.metric("Quick Ratio",    fv(quote['quick_ratio'],  ".2f", "x"))
+            d4.metric("Beta",           fv(quote['beta'],         ".2f"))
+            d5, d6, d7, d8 = st.columns(4)
+            d5.metric("Deuda Total",    fmt_large(quote['total_debt']))
+            d6.metric("Caja & Equiv.",  fmt_large(quote['cash']))
+            d7.metric("EV",             fmt_large(quote.get('ev')))
+            d8.metric("EBITDA",         fmt_large(quote.get('ebitda')))
+            st.markdown('</div>', unsafe_allow_html=True)
 
-            # ── Tarjeta 3: Deuda & Solvencia ──
-            st.markdown('<div class="section-title">🏦 Deuda & Solvencia</div>', unsafe_allow_html=True)
-            d1, d2, d3, d4, d5, d6 = st.columns(6)
-            d1.metric("Deuda/Equity",   fv(quote['debt_equity'], ".2f", "x"))
-            d2.metric("Current Ratio",  fv(quote['current_ratio'],".2f","x"))
-            d3.metric("Quick Ratio",    fv(quote['quick_ratio'],  ".2f","x"))
-            d4.metric("Deuda Total",    fmt_large(quote['total_debt']))
-            d5.metric("Caja & Equiv.",  fmt_large(quote['cash']))
-            d6.metric("Beta",           fv(quote['beta'], ".2f"))
-
-            st.markdown("---")
-
-            # ── Tarjeta 4: Dividendos & Analistas ──
-            st.markdown('<div class="section-title">🎯 Dividendos & Consenso de Analistas</div>', unsafe_allow_html=True)
-            a1, a2, a3, a4, a5, a6, a7 = st.columns(7)
-            a1.metric("Div. Yield",       fpct(quote['dividend']))
-            a2.metric("Div. Rate",        fv(quote['dividend_rate'], ".2f", prefix=f"{currency} "))
-            a3.metric("Payout Ratio",     fpct(quote['payout_ratio']))
-            a4.metric("Target Precio",    fv(quote['target_price'], ",.2f", prefix=f"{currency} "))
-            a5.metric("Target Máx",       fv(quote['target_high'],  ",.2f", prefix=f"{currency} "))
-            a6.metric("Target Mín",       fv(quote['target_low'],   ",.2f", prefix=f"{currency} "))
-            a7.metric("Consenso",         frec(quote['recommendation']))
+            # ── Card 4: Dividendos & Analistas (2 filas × 4 col) ──
+            st.markdown('<div class="ratio-card"><div class="ratio-card-title">🎯 Dividendos & Consenso de Analistas</div>', unsafe_allow_html=True)
+            a1, a2, a3, a4 = st.columns(4)
+            a1.metric("Div. Yield",     fpct(div_yield))
+            a2.metric("Div. Rate",      fv(quote['dividend_rate'], ".2f", prefix=f"{currency} "))
+            a3.metric("Payout Ratio",   fpct(quote['payout_ratio']))
+            a4.metric("Consenso",       frec(quote['recommendation']))
+            a5, a6, a7, a8 = st.columns(4)
+            a5.metric("Target Medio",   fv(quote['target_price'], ",.2f", prefix=f"{currency} "))
+            a6.metric("Target Máx",     fv(quote['target_high'],  ",.2f", prefix=f"{currency} "))
+            a7.metric("Target Mín",     fv(quote['target_low'],   ",.2f", prefix=f"{currency} "))
+            n_analysts = quote.get('num_analysts') or 0
+            a8.metric("N° Analistas",   str(n_analysts) if n_analysts else "N/D")
 
             # Upside/downside vs target
             if quote['target_price'] and quote['price']:
                 upside = ((quote['target_price'] / quote['price']) - 1) * 100
                 color_up = "#22c55e" if upside > 0 else "#ef4444"
                 arrow = "▲" if upside > 0 else "▼"
-                n_analysts = quote.get('num_analysts') or 0
                 st.markdown(
-                    f'<div style="margin-top:0.5rem;padding:0.6rem 1rem;background:#0d1526;'
+                    f'<div style="margin-top:0.6rem;padding:0.5rem 1rem;background:#06090f;'
                     f'border:1px solid #1a2d4a;border-radius:8px;display:inline-block;">'
-                    f'<span style="color:#5a7fa8;font-size:0.75rem;">UPSIDE VS. TARGET CONSENSO &nbsp;</span>'
-                    f'<span style="color:{color_up};font-weight:700;font-size:1.1rem;">'
-                    f'{arrow} {upside:+.1f}%</span>'
-                    f'<span style="color:#3a5a80;font-size:0.72rem;margin-left:1rem;">'
-                    f'Basado en {n_analysts} analistas</span></div>',
+                    f'<span style="color:#5a7fa8;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;">Upside vs. Target Consenso &nbsp;</span>'
+                    f'<span style="color:{color_up};font-weight:700;font-size:1rem;">{arrow} {upside:+.1f}%</span>'
+                    f'<span style="color:#3a5a80;font-size:0.7rem;margin-left:0.8rem;">({n_analysts} analistas)</span></div>',
                     unsafe_allow_html=True,
                 )
+            st.markdown('</div>', unsafe_allow_html=True)
 
+            st.markdown('</div>', unsafe_allow_html=True)  # cierre ratio-block
             st.markdown("---")
 
             # ── Selector de período ──
