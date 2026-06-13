@@ -743,10 +743,12 @@ with tab1:
 # TAB 2 — ANÁLISIS INDIVIDUAL
 # ═════════════════════════════════════════════════════════════
 with tab2:
+    # sector_tickers = {ticker: nombre} → invertimos para buscar por nombre
+    _name_to_ticker2 = {v: k for k, v in sector_tickers.items()}
     if selected_name == "— Seleccioná un activo —":
         st.info("👈 Seleccioná un activo desde el panel lateral para ver su análisis.")
-    elif selected_name in sector_tickers:
-        selected_ticker = sector_tickers[selected_name]
+    elif selected_name in _name_to_ticker2:
+        selected_ticker = _name_to_ticker2[selected_name]
         st.markdown(f'<div class="section-title">{selected_ticker} — {selected_name} · Análisis Técnico</div>',
                     unsafe_allow_html=True)
 
@@ -928,8 +930,8 @@ with tab4:
 
     if selected_name == "— Seleccioná un activo —":
         st.info("👈 Seleccioná un activo desde el panel lateral para ver su señal.")
-    elif selected_name in sector_tickers:
-        selected_ticker_q = sector_tickers[selected_name]
+    elif selected_name in _name_to_ticker2:
+        selected_ticker_q = _name_to_ticker2[selected_name]
         st.caption(f"Analizando: **{selected_ticker_q}** — {selected_name}")
 
         with st.spinner("Calculando indicadores técnicos…"):
