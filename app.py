@@ -539,61 +539,206 @@ def fetch_sector_quotes(sector_tickers: dict) -> pd.DataFrame:
 # ─────────────────────────────────────────────────────────────
 def compute_technical_signals(df: pd.DataFrame) -> dict:
     """
-    Calcula SMA20, SMA50, RSI14 y devuelve recomendación cuantitativa.
-    Señal: COMPRA / MANTENER / VENDER
+    Motor cuantitativo multi-indicador con scoring ponderado (0-100).
+    Indicadores: SMA20/50/200 · RSI14 · MACD(12,26,9) · Bollinger(20,2σ) · Volumen · ATR14
+    Score >= 65 → COMPRA | 35-64 → MANTENER | <= 34 → VENDER
     """
     if df.empty or len(df) < 51:
-        return {"signal": "DATOS INSUFICIENTES", "color": "hold",
-                "sma20": None, "sma50": None, "rsi": None, "reason": "Historial < 51 sesiones."}
+        return {
+            "signal": "DATOS INSUFICIENTES", "color": "hold", "score": 50,
+            "sma20": None, "sma50": None, "sma200": None, "rsi": None,
+            "macd": None, "macd_signal": None, "macd_hist": None,
+            "bb_upper": None, "bb_lower": None, "bb_mid": None, "bb_pct": None,
+            "atr": None, "atr_pct": None, "support": None, "resistance": None,
+            "trend_long": "N/D", "vol_signal": "N/D",
+            "reason": "Historial insuficiente (mínimo 51 sesiones).",
+            "details": {},
+        }
 
-    close = df["Close"].squeeze()
+    close  = df["Close"].squeeze()
+    high   = df["High"].squeeze()
+    low    = df["Low"].squeeze()
+    volume = df["Volume"].squeeze() if "Volume" in df.columns else None
+    price  = float(close.iloc[-1])
 
-    # SMA
-    sma20 = close.rolling(20).mean().iloc[-1]
-    sma50 = close.rolling(50).mean().iloc[-1]
-    price = close.iloc[-1]
+    # ── SMA 20 / 50 / 200 ──
+    sma20  = float(close.rolling(20).mean().iloc[-1])
+    sma50  = float(close.rolling(50).mean().iloc[-1])
+    sma200 = float(close.rolling(200).mean().iloc[-1]) if len(df) >= 200 else None
 
-    # RSI 14
-    delta   = close.diff()
-    gain    = delta.clip(lower=0).rolling(14).mean()
-    loss    = (-delta.clip(upper=0)).rolling(14).mean()
-    rs      = gain / loss.replace(0, np.nan)
-    rsi_series = 100 - (100 / (1 + rs))
-    rsi = rsi_series.iloc[-1]
+    # ── RSI 14 ──
+    delta      = close.diff()
+    gain       = delta.clip(lower=0).rolling(14).mean()
+    loss       = (-delta.clip(upper=0)).rolling(14).mean()
+    rs         = gain / loss.replace(0, np.nan)
+    rsi        = float((100 - (100 / (1 + rs))).iloc[-1])
 
-    # Lógica de señal
-    cross_bullish = sma20 > sma50
-    rsi_oversold  = rsi < 35
-    rsi_overbought= rsi > 70
-    price_above_sma20 = price > sma20
+    # ── MACD (12, 26, 9) ──
+    ema12      = close.ewm(span=12, adjust=False).mean()
+    ema26      = close.ewm(span=26, adjust=False).mean()
+    macd_line  = ema12 - ema26
+    macd_sig_l = macd_line.ewm(span=9, adjust=False).mean()
+    macd_hist  = macd_line - macd_sig_l
+    macd_val   = float(macd_line.iloc[-1])
+    macd_s_val = float(macd_sig_l.iloc[-1])
+    macd_h_val = float(macd_hist.iloc[-1])
+    macd_prev  = float(macd_hist.iloc[-2]) if len(macd_hist) >= 2 else macd_h_val
 
-    if cross_bullish and price_above_sma20 and not rsi_overbought:
+    # ── Bollinger Bands (20, 2σ) ──
+    bb_mid_s   = close.rolling(20).mean()
+    bb_std     = close.rolling(20).std()
+    bb_upper   = float((bb_mid_s + 2 * bb_std).iloc[-1])
+    bb_lower   = float((bb_mid_s - 2 * bb_std).iloc[-1])
+    bb_mid_v   = float(bb_mid_s.iloc[-1])
+    bb_pct     = (price - bb_lower) / (bb_upper - bb_lower) if (bb_upper - bb_lower) else 0.5
+
+    # ── ATR 14 ──
+    tr     = pd.concat([
+        high - low,
+        (high - close.shift()).abs(),
+        (low  - close.shift()).abs(),
+    ], axis=1).max(axis=1)
+    atr     = float(tr.rolling(14).mean().iloc[-1])
+    atr_pct = round(atr / price * 100, 2) if price else 0
+
+    # ── Volumen ──
+    vol_signal_str = "N/D"
+    vol_score_val  = 50
+    if volume is not None and len(volume) >= 20:
+        vol_avg   = float(volume.rolling(20).mean().iloc[-1])
+        vol_today = float(volume.iloc[-1])
+        vol_ratio = vol_today / vol_avg if vol_avg else 1
+        if vol_ratio > 1.5:
+            vol_signal_str, vol_score_val = "Muy Alto", 75
+        elif vol_ratio > 1.2:
+            vol_signal_str, vol_score_val = "Alto", 65
+        elif vol_ratio > 0.8:
+            vol_signal_str, vol_score_val = "Normal", 50
+        else:
+            vol_signal_str, vol_score_val = "Bajo", 30
+
+    # ── Soporte & Resistencia (últimas 52 semanas) ──
+    window_sr  = min(252, len(df))
+    resistance = float(high.iloc[-window_sr:].quantile(0.95))
+    support    = float(low.iloc[-window_sr:].quantile(0.05))
+
+    # ── Tendencia largo plazo ──
+    trend_long = ("Alcista 📈" if sma200 and price > sma200
+                  else "Bajista 📉" if sma200 else "N/D")
+
+    # ════════════════════════════════════
+    # SCORING PONDERADO (0–100)
+    # ════════════════════════════════════
+    scores  = {}
+    details = {}
+
+    # 1. Cruce SMA 20/50 (20%)
+    if sma20 > sma50 and price > sma20:
+        scores["sma_cross"] = 80
+        details["SMA 20/50"] = f"✅ Cruce alcista — SMA20 {sma20:.2f} > SMA50 {sma50:.2f}"
+    elif sma20 < sma50 and price < sma20:
+        scores["sma_cross"] = 20
+        details["SMA 20/50"] = f"❌ Cruce bajista — SMA20 {sma20:.2f} < SMA50 {sma50:.2f}"
+    else:
+        scores["sma_cross"] = 50
+        details["SMA 20/50"] = f"⚠️ Mixto — SMA20 {sma20:.2f} vs SMA50 {sma50:.2f}"
+
+    # 2. SMA 200 tendencia (15%)
+    if sma200:
+        if price > sma200:
+            scores["sma200"] = 75
+            details["SMA 200"] = f"✅ Precio sobre SMA200 {sma200:.2f} — bull market"
+        else:
+            scores["sma200"] = 25
+            details["SMA 200"] = f"❌ Precio bajo SMA200 {sma200:.2f} — bear market"
+    else:
+        scores["sma200"] = 50
+        details["SMA 200"] = "⚠️ Sin datos suficientes (requiere 200 sesiones)"
+
+    # 3. RSI 14 (20%)
+    if rsi < 30:
+        scores["rsi"] = 82
+        details["RSI 14"] = f"✅ Sobreventa RSI {rsi:.1f} (<30) → rebote potencial"
+    elif rsi < 40:
+        scores["rsi"] = 65
+        details["RSI 14"] = f"✅ RSI {rsi:.1f} — zona de acumulación"
+    elif rsi > 70:
+        scores["rsi"] = 18
+        details["RSI 14"] = f"❌ Sobrecompra RSI {rsi:.1f} (>70) → corrección potencial"
+    elif rsi > 60:
+        scores["rsi"] = 40
+        details["RSI 14"] = f"⚠️ RSI {rsi:.1f} — momentum elevado, cautela"
+    else:
+        scores["rsi"] = 55
+        details["RSI 14"] = f"⚠️ RSI {rsi:.1f} — zona neutral"
+
+    # 4. MACD (20%)
+    if macd_h_val > 0 and macd_h_val > macd_prev:
+        scores["macd"] = 82
+        details["MACD"] = f"✅ Histograma ↑ positivo ({macd_h_val:+.4f}) — momentum alcista"
+    elif macd_h_val > 0:
+        scores["macd"] = 60
+        details["MACD"] = f"⚠️ Histograma positivo pero debilitándose ({macd_h_val:+.4f})"
+    elif macd_h_val < 0 and macd_h_val < macd_prev:
+        scores["macd"] = 18
+        details["MACD"] = f"❌ Histograma ↓ negativo ({macd_h_val:+.4f}) — momentum bajista"
+    else:
+        scores["macd"] = 40
+        details["MACD"] = f"⚠️ Histograma negativo mejorando ({macd_h_val:+.4f})"
+
+    # 5. Bollinger Bands (15%)
+    if bb_pct < 0.15:
+        scores["bollinger"] = 80
+        details["Bollinger"] = f"✅ Precio en banda inferior ({bb_pct:.0%}) — zona de compra"
+    elif bb_pct > 0.85:
+        scores["bollinger"] = 20
+        details["Bollinger"] = f"❌ Precio en banda superior ({bb_pct:.0%}) — zona de venta"
+    elif bb_pct < 0.35:
+        scores["bollinger"] = 65
+        details["Bollinger"] = f"✅ Precio bajo media Bollinger ({bb_pct:.0%}) — sesgo alcista"
+    elif bb_pct > 0.65:
+        scores["bollinger"] = 40
+        details["Bollinger"] = f"⚠️ Precio sobre media Bollinger ({bb_pct:.0%}) — sesgo bajista"
+    else:
+        scores["bollinger"] = 52
+        details["Bollinger"] = f"⚠️ Precio en zona media ({bb_pct:.0%})"
+
+    # 6. Volumen (10%)
+    scores["volume"] = vol_score_val
+    icon = "✅" if vol_score_val >= 65 else "⚠️" if vol_score_val == 50 else "❌"
+    details["Volumen"] = f"{icon} Volumen {vol_signal_str} vs promedio 20 días"
+
+    # Score final
+    weights = {"sma_cross": 0.20, "sma200": 0.15, "rsi": 0.20,
+               "macd": 0.20, "bollinger": 0.15, "volume": 0.10}
+    score = round(sum(scores[k] * weights[k] for k in weights), 1)
+
+    if score >= 65:
         signal, color = "COMPRA", "buy"
-        reason = (f"SMA20 ({sma20:.2f}) > SMA50 ({sma50:.2f}) → cruce alcista. "
-                  f"RSI {rsi:.1f} en zona neutral. Precio sobre media de 20 días.")
-    elif rsi_overbought:
+    elif score <= 34:
         signal, color = "VENDER", "sell"
-        reason = (f"RSI {rsi:.1f} en zona de sobrecompra (>70). "
-                  f"Posible corrección técnica a la vista.")
-    elif rsi_oversold:
-        signal, color = "COMPRA", "buy"
-        reason = (f"RSI {rsi:.1f} en zona de sobreventa (<35). "
-                  f"Señal de reversión potencial al alza.")
-    elif not cross_bullish and not price_above_sma20:
-        signal, color = "VENDER", "sell"
-        reason = (f"SMA20 ({sma20:.2f}) < SMA50 ({sma50:.2f}) → cruce bajista. "
-                  f"Precio bajo ambas medias. Tendencia negativa.")
     else:
         signal, color = "MANTENER", "hold"
-        reason = (f"Señales mixtas: SMA20={sma20:.2f} vs SMA50={sma50:.2f}. "
-                  f"RSI {rsi:.1f} en zona neutral. Sin confirmación de tendencia.")
+
+    bulls = [v.replace("✅ ", "") for v in details.values() if "✅" in v]
+    bears = [v.replace("❌ ", "") for v in details.values() if "❌" in v]
+    reason = f"Score: {score}/100. "
+    if bulls: reason += f"Favorable: {bulls[0]}. "
+    if bears: reason += f"En contra: {bears[0]}."
 
     return {
-        "signal": signal, "color": color,
-        "sma20": round(float(sma20), 2),
-        "sma50": round(float(sma50), 2),
-        "rsi":   round(float(rsi), 1),
-        "reason": reason,
+        "signal": signal, "color": color, "score": score,
+        "sma20": round(sma20, 2), "sma50": round(sma50, 2),
+        "sma200": round(sma200, 2) if sma200 else None,
+        "rsi": round(rsi, 1),
+        "macd": round(macd_val, 4), "macd_signal": round(macd_s_val, 4),
+        "macd_hist": round(macd_h_val, 4),
+        "bb_upper": round(bb_upper, 2), "bb_lower": round(bb_lower, 2),
+        "bb_mid": round(bb_mid_v, 2), "bb_pct": round(bb_pct, 3),
+        "atr": round(atr, 2), "atr_pct": atr_pct,
+        "support": round(support, 2), "resistance": round(resistance, 2),
+        "trend_long": trend_long, "vol_signal": vol_signal_str,
+        "reason": reason, "details": details,
     }
 
 
@@ -623,11 +768,33 @@ BASE_THEME = dict(
 )
 
 
-def plot_candlestick(df: pd.DataFrame, ticker: str, sma20=None, sma50=None) -> go.Figure:
-    """Gráfico de velas OHLC con SMA overlay."""
+def plot_candlestick(df: pd.DataFrame, ticker: str,
+                     sma20=None, sma50=None, sma200=None,
+                     show_bb=False, support=None, resistance=None) -> go.Figure:
+    """Gráfico de velas OHLC con SMA20/50/200 + Bollinger + Soporte/Resistencia."""
     fig = go.Figure()
 
-    # Velas
+    # ── Bollinger Bands (debajo de todo) ──
+    if show_bb:
+        bb_m = df["Close"].rolling(20).mean()
+        bb_s = df["Close"].rolling(20).std()
+        bb_u = bb_m + 2 * bb_s
+        bb_l = bb_m - 2 * bb_s
+        fig.add_trace(go.Scatter(
+            x=df.index, y=bb_u, name="BB Superior",
+            line=dict(color="#6366f1", width=1, dash="dot"), opacity=0.7,
+        ))
+        fig.add_trace(go.Scatter(
+            x=df.index, y=bb_l, name="BB Inferior",
+            line=dict(color="#6366f1", width=1, dash="dot"),
+            fill="tonexty", fillcolor="rgba(99,102,241,0.05)", opacity=0.7,
+        ))
+        fig.add_trace(go.Scatter(
+            x=df.index, y=bb_m, name="BB Media",
+            line=dict(color="#818cf8", width=0.8, dash="dash"), opacity=0.6,
+        ))
+
+    # ── Velas ──
     fig.add_trace(go.Candlestick(
         x=df.index,
         open=df["Open"], high=df["High"],
@@ -637,22 +804,34 @@ def plot_candlestick(df: pd.DataFrame, ticker: str, sma20=None, sma50=None) -> g
         increasing_fillcolor="#22c55e",
         decreasing_fillcolor="#ef4444",
         name=ticker,
-        hovertext=ticker,
     ))
 
-    # SMAs
+    # ── SMAs ──
     if sma20 is not None:
-        ma20 = df["Close"].rolling(20).mean()
         fig.add_trace(go.Scatter(
-            x=df.index, y=ma20, name="SMA 20",
-            line=dict(color="#f59e0b", width=1.5, dash="solid"),
+            x=df.index, y=df["Close"].rolling(20).mean(), name="SMA 20",
+            line=dict(color="#f59e0b", width=1.5),
         ))
     if sma50 is not None:
-        ma50 = df["Close"].rolling(50).mean()
         fig.add_trace(go.Scatter(
-            x=df.index, y=ma50, name="SMA 50",
+            x=df.index, y=df["Close"].rolling(50).mean(), name="SMA 50",
             line=dict(color="#3b82f6", width=1.5, dash="dash"),
         ))
+    if sma200 is not None and len(df) >= 200:
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df["Close"].rolling(200).mean(), name="SMA 200",
+            line=dict(color="#ec4899", width=1.5, dash="longdash"),
+        ))
+
+    # ── Soporte & Resistencia ──
+    if support is not None:
+        fig.add_hline(y=support, line_color="#22c55e", line_width=1.2, line_dash="dot",
+                      annotation_text=f"Soporte {support:.2f}",
+                      annotation_font=dict(color="#22c55e", size=10))
+    if resistance is not None:
+        fig.add_hline(y=resistance, line_color="#ef4444", line_width=1.2, line_dash="dot",
+                      annotation_text=f"Resistencia {resistance:.2f}",
+                      annotation_font=dict(color="#ef4444", size=10))
 
     # Volumen como barras en eje secundario
     colors = ["#22c55e" if c >= o else "#ef4444"
@@ -711,6 +890,45 @@ def plot_comparison(tickers: list, period: str = "6mo") -> go.Figure:
         hovermode="x unified",
         margin=dict(l=10, r=10, t=40, b=10),
         height=460,
+    )
+    return fig
+
+
+def plot_macd(df: pd.DataFrame) -> go.Figure:
+    """Panel MACD (12,26,9) standalone."""
+    close     = df["Close"].squeeze()
+    ema12     = close.ewm(span=12, adjust=False).mean()
+    ema26     = close.ewm(span=26, adjust=False).mean()
+    macd_line = ema12 - ema26
+    macd_sig  = macd_line.ewm(span=9, adjust=False).mean()
+    macd_hist = macd_line - macd_sig
+
+    colors_hist = ["#22c55e" if v >= 0 else "#ef4444" for v in macd_hist]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df.index, y=macd_hist, name="Histograma",
+        marker_color=colors_hist, opacity=0.7,
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=macd_line, name="MACD",
+        line=dict(color="#3b82f6", width=1.5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=macd_sig, name="Señal",
+        line=dict(color="#f59e0b", width=1.2, dash="dash"),
+    ))
+    fig.add_hline(y=0, line_color="#1a2d4a", line_width=1)
+    fig.update_layout(
+        paper_bgcolor="#06090f", plot_bgcolor="#06090f",
+        font=dict(color="#8fadc8", family="Inter, sans-serif", size=11),
+        legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1a2d4a", borderwidth=1),
+        title=dict(text="MACD (12, 26, 9)", font=dict(color="#e8f0fe", size=13)),
+        xaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
+        yaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
+        hovermode="x unified",
+        height=200,
+        margin=dict(l=10, r=10, t=35, b=10),
     )
     return fig
 
@@ -1234,74 +1452,148 @@ with tab3:
 
 
 # ═════════════════════════════════════════════════════════════
-# TAB 4 — SEÑAL CUANTITATIVA
+# TAB 4 — SEÑAL CUANTITATIVA (MOTOR MULTI-INDICADOR)
 # ═════════════════════════════════════════════════════════════
 with tab4:
-    st.markdown('<div class="section-title">Sistema de Recomendación Cuantitativa</div>',
+    st.markdown('<div class="section-title">🤖 Sistema de Recomendación Cuantitativa — Motor Multi-Indicador</div>',
                 unsafe_allow_html=True)
 
     if manual_ticker:
         selected_ticker_q = manual_ticker
-        selected_name_q = manual_ticker
+        selected_name_q   = manual_ticker
     elif selected_name != "— Seleccioná un activo —" and selected_name in _name_to_ticker2:
         selected_ticker_q = _name_to_ticker2[selected_name]
-        selected_name_q = selected_name
+        selected_name_q   = selected_name
     else:
         selected_ticker_q = None
-        selected_name_q = None
+        selected_name_q   = None
 
     if not selected_ticker_q:
         st.info("👈 Seleccioná un activo desde el panel lateral o ingresá un ticker en el buscador.")
+
     if selected_ticker_q:
         st.caption(f"Analizando: **{selected_ticker_q}** — {selected_name_q}")
 
-        with st.spinner("Calculando indicadores técnicos…"):
-            df_signal = fetch_ohlcv(selected_ticker_q, period="1y")
+        with st.spinner("Calculando 6 indicadores técnicos…"):
+            df_signal = fetch_ohlcv(selected_ticker_q, period="2y")
             signals   = compute_technical_signals(df_signal)
 
-        # ── Chip de señal ──
-        chip_class = {"buy": "rec-buy", "hold": "rec-hold", "sell": "rec-sell"}
-        chip_emoji = {"buy": "🟢", "hold": "🟡", "sell": "🔴"}
-        label_map  = {"buy": "COMPRA", "hold": "MANTENER", "sell": "VENDER"}
-
-        color_key = signals["color"] if signals["color"] in chip_class else "hold"
+        chip_class   = {"buy": "rec-buy", "hold": "rec-hold", "sell": "rec-sell"}
+        chip_emoji   = {"buy": "🟢", "hold": "🟡", "sell": "🔴"}
+        label_map    = {"buy": "COMPRA", "hold": "MANTENER", "sell": "VENDER"}
+        color_key    = signals["color"] if signals["color"] in chip_class else "hold"
         signal_label = label_map.get(color_key, signals["signal"])
+        score        = signals.get("score", 50)
 
-        col_chip, col_reason = st.columns([1, 2])
+        # ── FILA 1: Señal + Score gauge + Razón ──
+        col_chip, col_gauge, col_reason = st.columns([1.2, 1, 2])
+
         with col_chip:
             st.markdown(
-                f'<div style="text-align:center;padding:1.5rem 0;">'
+                f'<div style="text-align:center;padding:1.2rem 0 0.5rem 0;">'
                 f'<div class="rec-chip {chip_class[color_key]}">'
                 f'{chip_emoji[color_key]} {signal_label}</div>'
-                f'<div style="color:#5a7fa8;font-size:0.75rem;margin-top:0.5rem;">'
-                f'Basado en SMA20/50 + RSI14</div>'
+                f'<div style="color:#5a7fa8;font-size:0.7rem;margin-top:0.4rem;">'
+                f'Motor: 6 indicadores ponderados</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
+        with col_gauge:
+            gauge_color = "#22c55e" if score >= 65 else ("#ef4444" if score <= 34 else "#f59e0b")
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=score,
+                domain={"x": [0, 1], "y": [0, 1]},
+                title={"text": "Score", "font": {"color": "#8fadc8", "size": 12}},
+                number={"font": {"color": gauge_color, "size": 28}},
+                gauge={
+                    "axis": {"range": [0, 100], "tickcolor": "#1a2d4a",
+                             "tickfont": {"color": "#5a7fa8", "size": 9}},
+                    "bar":  {"color": gauge_color, "thickness": 0.25},
+                    "bgcolor": "#0d1526",
+                    "bordercolor": "#1a2d4a",
+                    "steps": [
+                        {"range": [0, 34],  "color": "rgba(239,68,68,0.15)"},
+                        {"range": [34, 65], "color": "rgba(245,158,11,0.10)"},
+                        {"range": [65, 100],"color": "rgba(34,197,94,0.15)"},
+                    ],
+                    "threshold": {"line": {"color": gauge_color, "width": 2},
+                                  "thickness": 0.7, "value": score},
+                },
+            ))
+            fig_gauge.update_layout(
+                paper_bgcolor="#06090f", plot_bgcolor="#06090f",
+                font=dict(color="#8fadc8"),
+                height=160, margin=dict(l=10, r=10, t=20, b=10),
+            )
+            st.plotly_chart(fig_gauge, use_container_width=True, key="chart_gauge")
+
         with col_reason:
-            st.markdown("**📋 Justificación algorítmica:**")
+            st.markdown("**📋 Análisis:**")
             st.info(signals["reason"])
+            t_long = signals.get("trend_long", "N/D")
+            vol_s  = signals.get("vol_signal", "N/D")
+            atr_p  = signals.get("atr_pct", 0)
+            st.markdown(
+                f'<div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.4rem;">'
+                f'<span style="background:#0d1526;border:1px solid #1a2d4a;border-radius:6px;'
+                f'padding:0.2rem 0.6rem;font-size:0.72rem;color:#8fadc8;">📈 Tendencia: <b style="color:#e8f0fe">{t_long}</b></span>'
+                f'<span style="background:#0d1526;border:1px solid #1a2d4a;border-radius:6px;'
+                f'padding:0.2rem 0.6rem;font-size:0.72rem;color:#8fadc8;">📊 Volumen: <b style="color:#e8f0fe">{vol_s}</b></span>'
+                f'<span style="background:#0d1526;border:1px solid #1a2d4a;border-radius:6px;'
+                f'padding:0.2rem 0.6rem;font-size:0.72rem;color:#8fadc8;">⚡ ATR: <b style="color:#e8f0fe">{atr_p:.1f}%</b></span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
-        # ── Indicadores numéricos ──
+        # ── FILA 2: Métricas de indicadores ──
         st.markdown("---")
-        st.markdown('<div class="section-title">Valores de Indicadores</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📐 Valores de Indicadores</div>', unsafe_allow_html=True)
 
-        i1, i2, i3 = st.columns(3)
-        i1.metric("SMA 20 días",
-                  f"{signals['sma20']:.2f}" if signals['sma20'] else "N/D",
-                  help="Media móvil simple de 20 sesiones. Tendencia de corto plazo.")
-        i2.metric("SMA 50 días",
-                  f"{signals['sma50']:.2f}" if signals['sma50'] else "N/D",
-                  help="Media móvil simple de 50 sesiones. Tendencia de mediano plazo.")
-        i3.metric("RSI 14 días",
-                  f"{signals['rsi']:.1f}" if signals['rsi'] else "N/D",
-                  help="Índice de Fuerza Relativa. <30 sobreventa, >70 sobrecompra.")
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric("SMA 20",   f"{signals['sma20']:.2f}"    if signals['sma20']   else "N/D",
+                  help="Media móvil 20 sesiones — tendencia corto plazo")
+        m2.metric("SMA 50",   f"{signals['sma50']:.2f}"    if signals['sma50']   else "N/D",
+                  help="Media móvil 50 sesiones — tendencia mediano plazo")
+        m3.metric("SMA 200",  f"{signals['sma200']:.2f}"   if signals['sma200']  else "N/D",
+                  help="Media móvil 200 sesiones — tendencia largo plazo")
+        m4.metric("RSI 14",   f"{signals['rsi']:.1f}"      if signals['rsi']     else "N/D",
+                  help="<30 sobreventa · >70 sobrecompra")
+        m5.metric("MACD Hist",f"{signals['macd_hist']:+.4f}"if signals['macd_hist'] is not None else "N/D",
+                  help="Histograma MACD: positivo = momentum alcista")
+        m6.metric("BB %",     f"{signals['bb_pct']:.0%}"   if signals['bb_pct']  is not None else "N/D",
+                  help="Posición dentro de las Bandas de Bollinger (0%=inferior, 100%=superior)")
 
-        # ── Gráfico con señales ──
+        m7, m8, m9, m10, _, _ = st.columns(6)
+        m7.metric("Soporte",     f"{signals['support']:.2f}"     if signals['support']     else "N/D",
+                  help="Nivel de soporte clave (percentil 5%, últimas 52 semanas)")
+        m8.metric("Resistencia", f"{signals['resistance']:.2f}"  if signals['resistance']  else "N/D",
+                  help="Nivel de resistencia clave (percentil 95%, últimas 52 semanas)")
+        m9.metric("ATR 14",      f"{signals['atr']:.2f}"         if signals['atr']         else "N/D",
+                  help="Average True Range — volatilidad real diaria promedio")
+        m10.metric("ATR %",      f"{signals['atr_pct']:.1f}%"    if signals['atr_pct']     else "N/D",
+                   help="ATR como % del precio — riesgo diario normalizado")
+
+        # ── FILA 3: Detalle por indicador ──
         st.markdown("---")
-        st.markdown('<div class="section-title">Gráfico con Señales Técnicas (1 año)</div>',
+        st.markdown('<div class="section-title">🔍 Detalle por Indicador</div>', unsafe_allow_html=True)
+
+        details = signals.get("details", {})
+        if details:
+            for indicador, desc in details.items():
+                icon_color = "#22c55e" if "✅" in desc else ("#ef4444" if "❌" in desc else "#f59e0b")
+                st.markdown(
+                    f'<div style="padding:0.45rem 0.8rem;margin-bottom:0.35rem;'
+                    f'background:#0a111f;border-left:3px solid {icon_color};'
+                    f'border-radius:0 6px 6px 0;font-size:0.82rem;color:#c8d6f0;">'
+                    f'<b style="color:{icon_color};">{indicador}</b> — {desc}</div>',
+                    unsafe_allow_html=True,
+                )
+
+        # ── FILA 4: Gráficos técnicos ──
+        st.markdown("---")
+        st.markdown('<div class="section-title">📈 Gráficos con Señales Técnicas (2 años)</div>',
                     unsafe_allow_html=True)
 
         if not df_signal.empty:
@@ -1309,18 +1601,23 @@ with tab4:
                 df_signal, selected_ticker_q,
                 sma20=signals.get("sma20"),
                 sma50=signals.get("sma50"),
+                sma200=signals.get("sma200"),
+                show_bb=True,
+                support=signals.get("support"),
+                resistance=signals.get("resistance"),
             )
-            st.plotly_chart(fig_sig, use_container_width=True)
+            st.plotly_chart(fig_sig, use_container_width=True, key="chart_sig")
 
-            # RSI panel
+            if len(df_signal) >= 26:
+                st.plotly_chart(plot_macd(df_signal), use_container_width=True, key="chart_macd_tab4")
             if len(df_signal) >= 15:
-                st.plotly_chart(plot_rsi(df_signal), use_container_width=True)
+                st.plotly_chart(plot_rsi(df_signal), use_container_width=True, key="chart_rsi_tab4")
 
         # ── Disclaimer ──
         st.markdown("---")
         st.warning(
-            "⚠️ **Disclaimer:** Esta señal es generada por un algoritmo cuantitativo básico "
-            "para fines educativos e informativos. No constituye asesoramiento de inversión. "
+            "⚠️ **Disclaimer:** Esta señal es generada por un algoritmo cuantitativo para fines "
+            "educativos e informativos. No constituye asesoramiento de inversión. "
             "Las decisiones de inversión son exclusiva responsabilidad del usuario. "
             "Consultá siempre con un asesor financiero certificado antes de operar."
         )
