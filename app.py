@@ -438,7 +438,6 @@ BASE_THEME = dict(
     plot_bgcolor="#06090f",
     font=dict(color="#8fadc8", family="Inter, sans-serif", size=11),
     legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1a2d4a", borderwidth=1),
-    margin=dict(l=10, r=10, t=40, b=10),
 )
 
 
@@ -519,12 +518,16 @@ def plot_comparison(tickers: list, period: str = "6mo") -> go.Figure:
 
     fig.add_hline(y=0, line_color="#1a2d4a", line_width=1)
     fig.update_layout(
-        **BASE_THEME,
+        paper_bgcolor="#06090f",
+        plot_bgcolor="#06090f",
+        font=dict(color="#8fadc8", family="Inter, sans-serif", size=11),
+        legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1a2d4a", borderwidth=1),
         title=dict(text="<b>Comparador de Rendimiento</b> (base 100)",
                    font=dict(color="#e8f0fe", size=14)),
         xaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
         yaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e", title="Rendimiento %"),
         hovermode="x unified",
+        margin=dict(l=10, r=10, t=40, b=10),
         height=460,
     )
     return fig
@@ -549,7 +552,10 @@ def plot_rsi(df: pd.DataFrame) -> go.Figure:
     fig.add_hline(y=70, line_color="#ef4444", line_width=1, line_dash="dash")
     fig.add_hline(y=30, line_color="#22c55e", line_width=1, line_dash="dash")
     fig.update_layout(
-        **BASE_THEME,
+        paper_bgcolor="#06090f",
+        plot_bgcolor="#06090f",
+        font=dict(color="#8fadc8", family="Inter, sans-serif", size=11),
+        legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#1a2d4a", borderwidth=1),
         title=dict(text="RSI (14)", font=dict(color="#e8f0fe", size=13)),
         xaxis=dict(gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
         yaxis=dict(range=[0, 100], gridcolor="#0d1a2e", zerolinecolor="#0d1a2e"),
