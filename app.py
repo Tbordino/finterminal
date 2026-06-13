@@ -755,7 +755,7 @@ with tab1:
                 height=320,
                 margin=dict(l=0, r=0, t=0, b=0),
             )
-            st.plotly_chart(fig_heat, use_container_width=True)
+            st.plotly_chart(fig_heat, use_container_width=True, key="chart_heat")
 
 
 # ═════════════════════════════════════════════════════════════
@@ -828,12 +828,12 @@ with tab2:
                     sma20=signals.get("sma20") if show_sma else None,
                     sma50=signals.get("sma50") if show_sma else None,
                 )
-                st.plotly_chart(fig_candle, use_container_width=True)
+                st.plotly_chart(fig_candle, use_container_width=True, key="chart_candle_tab2")
 
                 # RSI (solo para períodos > 5D)
                 if period_label not in ["1D", "5D"] and len(df_hist) >= 15:
                     fig_rsi = plot_rsi(df_hist)
-                    st.plotly_chart(fig_rsi, use_container_width=True)
+                    st.plotly_chart(fig_rsi, use_container_width=True, key="chart_rsi_tab2")
 
                 # Stats del período
                 st.markdown("---")
@@ -898,7 +898,7 @@ with tab3:
     else:
         with st.spinner("Descargando datos para comparación…"):
             fig_comp = plot_comparison(selected_tickers_comp, period=yf_comp_period)
-        st.plotly_chart(fig_comp, use_container_width=True)
+        st.plotly_chart(fig_comp, use_container_width=True, key="chart_comp")
 
         # Tabla de métricas comparativas
         st.markdown("---")
@@ -1008,11 +1008,11 @@ with tab4:
                 sma20=signals.get("sma20"),
                 sma50=signals.get("sma50"),
             )
-            st.plotly_chart(fig_sig, use_container_width=True)
+            st.plotly_chart(fig_sig, use_container_width=True, key="chart_sig")
 
             # RSI panel
             if len(df_signal) >= 15:
-                st.plotly_chart(plot_rsi(df_signal), use_container_width=True)
+                st.plotly_chart(plot_rsi(df_signal), use_container_width=True, key="chart_rsi_tab4")
 
         # ── Disclaimer ──
         st.markdown("---")
